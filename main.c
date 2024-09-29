@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #define MAX_OBJECTS 500
+
 /* Apply to the ball some physical :) */
 typedef struct VerletObject
 {
@@ -44,24 +45,23 @@ void solve_collision(VerletObject *objects, int count)
 }
 
 float global_time;
+float circle_area_verlet = 0;
 
 VerletObject generate_verlet_object()
 {
     VerletObject verlet_object = {0};
     verlet_object.size = GetRandomValue(10, 35);
+    circle_area_verlet += PI * verlet_object.size * verlet_object.size;
 
     const float r = sinf(global_time);
     const float g = sinf(global_time + 0.33f * 2.0f * PI);
     const float b = sinf(global_time + 0.66f * 2.0f * PI);
 
-    verlet_object.color = (Color){
-        (unsigned char)(255.0f * r * r), 
-        (unsigned char)(255.0f * g * g),
-        (unsigned char)(255.0f * b * b), 
-        255
-    };
+    verlet_object.color = (Color){(unsigned char)(255.0f * r * r), (unsigned char)(255.0f * g * g),
+                                  (unsigned char)(255.0f * b * b), 255};
 
-    verlet_object.current_position = (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f};
+    verlet_object.current_position =
+        (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f};
     verlet_object.old_position = verlet_object.current_position;
 
     return verlet_object;
@@ -79,9 +79,13 @@ int main(void)
     Vector2 circle_cover = {window_width / 2.0f, window_height / 2.0f};
     float circle_cover_radius = 400;
 
+    // Calculate the area of big circle
+    float circle_area_circle_cover = PI * circle_cover_radius * circle_cover_radius;
+
     float elapsed_time = 0.0f;
     int active_objects = 0;
     Vector2 gravity = {0.0f, 1000.0f};
+    float percentage_occupied = 0;
 
     while (!WindowShouldClose())
     {
@@ -89,12 +93,18 @@ int main(void)
         elapsed_time += delta_time;
         global_time += delta_time;
 
-        if (elapsed_time >= 0.05f && active_objects < MAX_OBJECTS)
-        {
-            verlet_objects[active_objects] = generate_verlet_object();
-            active_objects++;
+        // The total area of verlet objects that generate_verlet_object() generated
+        percentage_occupied = (circle_area_verlet / circle_area_circle_cover) * 100;
 
-            elapsed_time = 0;
+        if (percentage_occupied < 60) // 60%
+        {
+            if (elapsed_time >= 0.03f && active_objects < MAX_OBJECTS)
+            {
+                verlet_objects[active_objects] = generate_verlet_object();
+                active_objects++;
+
+                elapsed_time = 0;
+            }
         }
 
         for (int i = 0; i < MAX_OBJECTS; i++)
@@ -114,7 +124,9 @@ int main(void)
         }
 
         BeginDrawing();
+
         ClearBackground(RAYWHITE);
+
         DrawCircleV(circle_cover, circle_cover_radius, BLACK);
 
         for (int i = 0; i < MAX_OBJECTS; i++)
@@ -125,6 +137,7 @@ int main(void)
         solve_collision(verlet_objects, active_objects);
 
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 30, 20, RED);
+        DrawText(TextFormat("percentage: %.2f %", percentage_occupied), 10, 50, 20, RED);
 
         EndDrawing();
     }
