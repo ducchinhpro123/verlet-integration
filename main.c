@@ -43,18 +43,25 @@ void solve_collision(VerletObject *objects, int count)
     }
 }
 
+float global_time;
+
 VerletObject generate_verlet_object()
 {
     VerletObject verlet_object = {0};
-    verlet_object.size = GetRandomValue(10, 30);
-    verlet_object.color = CLITERAL(Color){
-        GetRandomValue(0, 255),
-        GetRandomValue(0, 255),
-        GetRandomValue(0, 255),
-            255
+    verlet_object.size = GetRandomValue(10, 35);
+
+    const float r = sinf(global_time);
+    const float g = sinf(global_time + 0.33f * 2.0f * PI);
+    const float b = sinf(global_time + 0.66f * 2.0f * PI);
+
+    verlet_object.color = (Color){
+        (unsigned char)(255.0f * r * r), 
+        (unsigned char)(255.0f * g * g),
+        (unsigned char)(255.0f * b * b), 
+        255
     };
-    verlet_object.current_position =
-        (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f};
+
+    verlet_object.current_position = (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f};
     verlet_object.old_position = verlet_object.current_position;
 
     return verlet_object;
@@ -80,6 +87,7 @@ int main(void)
     {
         float delta_time = GetFrameTime();
         elapsed_time += delta_time;
+        global_time += delta_time;
 
         if (elapsed_time >= 0.05f && active_objects < MAX_OBJECTS)
         {
