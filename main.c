@@ -1,9 +1,18 @@
 #include <raylib.h>
 #include <raymath.h>
-#include <stdio.h>
+#include <time.h>
+/*#include <stdio.h>*/
 
-#define MAX_OBJECTS 500
+#define MAX_OBJECTS 1000
 /* Apply to the ball some physical :) */
+
+typedef struct BigCircle
+{
+    Vector2 pos;
+    Color color;
+    float radius;
+} BigCircle;
+
 typedef struct VerletObject
 {
     Vector2 current_position;
@@ -17,6 +26,7 @@ typedef struct VerletObject
 void update_position(VerletObject *verlet_object, float delta_time);
 void accelerate(VerletObject *verlet_object, Vector2 acc);
 void solve_collision(VerletObject *objects, int count);
+void solve_collision_verlet_circle(VerletObject *verlet_object, BigCircle big_circle);
 VerletObject generate_verlet_object();
 
 float global_time;
@@ -24,26 +34,25 @@ float circle_area_verlet = 0;
 
 int main(void)
 {
+    float elapsed_time = 0.0f;
+    int active_objects = 0;
     int verlet_objects_number = 0;
+    float percentage_occupied = 0;
     const int window_width = 1600, window_height = 900;
+
     InitWindow(window_width, window_height, "Verlet Integration");
     SetTargetFPS(60);
 
     VerletObject verlet_objects[MAX_OBJECTS];
-    // The circle that wrap the other smaller circles
 
-    Vector2 circle_cover = {window_width / 2.0f, window_height / 2.0f};
-    float circle_cover_radius = 400;
+    Vector2 gravity = {0.0f, 500.0f};
 
-    // Calculate the area of big circle
-    float circle_area_circle_cover = PI * circle_cover_radius * circle_cover_radius;
+    BigCircle big_circle = {0};
+    big_circle.radius = 450;
+    big_circle.pos = (Vector2){window_width / 2.0f, window_height / 2.0f};
+    big_circle.color = BLACK;
 
-    float elapsed_time = 0.0f;
-
-    int active_objects = 0;
-
-    Vector2 gravity = {0.0f, 1000.0f};
-    float percentage_occupied = 0;
+    float circle_area_circle_cover = PI * big_circle.radius * big_circle.radius;
 
     while (!WindowShouldClose())
     {
@@ -55,52 +64,38 @@ int main(void)
         percentage_occupied = (circle_area_verlet / circle_area_circle_cover) * 100;
 
         // Generate verlet objects
-        if (percentage_occupied < 80)  // 80%
+        if (elapsed_time > 0.01f && percentage_occupied < 95)  // 80%
         {
-            if (elapsed_time > 0.025f && active_objects < MAX_OBJECTS)
+            if (active_objects < MAX_OBJECTS)
             {
                 verlet_objects[active_objects] = generate_verlet_object();
-
-                /*VerletObject *verlet_object = &verlet_objects[active_objects];*/
-                /*accelerate(verlet_object, gravity);*/
-                /*update_position(verlet_object, delta_time);*/
-
                 active_objects++;
                 elapsed_time = 0;
                 verlet_objects_number++;
             }
         }
 
-        // Check collision between verlet object and big circle
         for (int i = 0; i < MAX_OBJECTS; i++)
         {
             VerletObject *verlet_object = &verlet_objects[i];
 
-            Vector2 to_obj = Vector2Subtract(verlet_object->current_position, circle_cover);
-            float dist = Vector2Length(to_obj);  // Magnitude of to_obj
-            if (dist > (circle_cover_radius - verlet_object->size))
-            {
-                Vector2 n = Vector2Normalize(to_obj);
-                verlet_object->current_position = Vector2Add(
-                    circle_cover, Vector2Scale(n, circle_cover_radius - verlet_object->size));
-            }
-
-            accelerate(verlet_object, gravity);
+            solve_collision_verlet_circle(verlet_object, big_circle);
             update_position(verlet_object, delta_time);
+            accelerate(verlet_object, gravity);
         }
 
+        solve_collision(verlet_objects, active_objects);
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
-        DrawCircleV(circle_cover, circle_cover_radius, BLACK);
+        DrawCircleV(big_circle.pos, big_circle.radius, BLACK);
 
         for (int i = 0; i < MAX_OBJECTS; i++)
         {
             DrawCircleV(verlet_objects[i].current_position, verlet_objects[i].size,
                         verlet_objects[i].color);
         }
-        solve_collision(verlet_objects, active_objects);
 
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 30, 20, RED);
         DrawText(TextFormat("percentage: %.2f %", percentage_occupied), 10, 50, 20, RED);
@@ -112,32 +107,36 @@ int main(void)
     return 0;
 }
 
+void solve_collision_verlet_circle(VerletObject *verlet_object, BigCircle big_circle)
+{
+    Vector2 to_obj = Vector2Subtract(verlet_object->current_position, big_circle.pos);
+    float dist = Vector2Length(to_obj);  // Magnitude of to_obj
+    if (dist > (float)(big_circle.radius - verlet_object->size))
+    {
+        Vector2 n = Vector2Normalize(to_obj);
+        verlet_object->current_position =
+            Vector2Add(big_circle.pos, Vector2Scale(n, big_circle.radius - verlet_object->size));
+    }
+}
+
 void update_position(VerletObject *verlet_object, float delta_time)
 {
-    Vector2 velocity;
-    velocity.x = verlet_object->current_position.x - verlet_object->old_position.x;
-    velocity.y = verlet_object->current_position.y - verlet_object->old_position.y;
+    Vector2 velocity = Vector2Subtract(verlet_object->current_position, verlet_object->old_position);
 
     // Save current position into old position
     verlet_object->old_position = verlet_object->current_position;
 
     // Perform Verlet Integration
-    verlet_object->current_position.x = verlet_object->current_position.x + velocity.x +
-                                        verlet_object->acceleration.x * delta_time * delta_time;
-
-    verlet_object->current_position.y = verlet_object->current_position.y + velocity.y +
-                                        verlet_object->acceleration.y * delta_time * delta_time;
+    verlet_object->current_position = Vector2Add(
+        verlet_object->current_position,
+        Vector2Add(velocity, Vector2Scale(verlet_object->acceleration, delta_time * delta_time)));
 
     // Reset acceleration
-    verlet_object->acceleration.x = 0;
-    verlet_object->acceleration.y = 0;
+    verlet_object->acceleration = (Vector2){0, 0};
 }
 
 void accelerate(VerletObject *verlet_object, Vector2 acc)
 {
-    /*verlet_object->acceleration.x += acc.x;*/
-    /*verlet_object->acceleration.y += acc.y;*/
-
     verlet_object->acceleration = Vector2Add(verlet_object->acceleration, acc);
 }
 
@@ -158,10 +157,8 @@ void solve_collision(VerletObject *objects, int count)
             {
                 Vector2 n = Vector2Normalize(collision_axis);
                 float delta = min_dist - dist;
-                object1->current_position =
-                    Vector2Add(object1->current_position, Vector2Scale(n, delta * 0.5f));
-object2->current_position =
-                    Vector2Subtract(object2->current_position, Vector2Scale(n, delta * 0.5f));
+                object1->current_position = Vector2Add(object1->current_position, Vector2Scale(n, delta * 0.5f));
+                object2->current_position = Vector2Subtract(object2->current_position, Vector2Scale(n, delta * 0.5f));
             }
         }
     }
@@ -169,6 +166,7 @@ object2->current_position =
 
 VerletObject generate_verlet_object()
 {
+    SetRandomSeed(GetTime()*1000.0);
     VerletObject verlet_object = {0};
     verlet_object.size = GetRandomValue(1, 20);
     /*verlet_object.size = 20;*/
@@ -179,14 +177,14 @@ VerletObject generate_verlet_object()
     const float b = sinf(global_time + 0.66f * 2.0f * PI);
 
     verlet_object.color = (Color){(unsigned char)(255.0f * r * r), (unsigned char)(255.0f * g * g),
-                                  (unsigned char)(255.0f * b * b), 255};
+                                  (unsigned char)(255.0f * b * b), 255.0f};
 
     verlet_object.phase = global_time;
 
     /*float oscillation = 50.0f * sinf(verlet_object.phase);*/
 
-    verlet_object.current_position = (Vector2){GetScreenWidth() / 2.0f + 200.0f, 
-        GetScreenHeight() / 2.0f - 200.0f};
+    verlet_object.current_position =
+        (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f - 200.0f};
     verlet_object.old_position = verlet_object.current_position;
 
     return verlet_object;
