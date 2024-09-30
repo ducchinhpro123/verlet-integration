@@ -45,7 +45,7 @@ int main(void)
 
     VerletObject verlet_objects[MAX_OBJECTS];
 
-    Vector2 gravity = {0.0f, 500.0f};
+    Vector2 gravity = {0.0f, 98.0f};
 
     BigCircle big_circle = {0};
     big_circle.radius = 450;
@@ -75,8 +75,8 @@ int main(void)
             }
         }
 
-        float delta_dt = delta_time / 2.0f;
-        for (int step = 0; step < 2; step++)
+        float delta_dt = delta_time / 8.0f;
+        for (int step = 0; step < 8; step++)
         {
             for (int i = 0; i < MAX_OBJECTS; i++)
             {
