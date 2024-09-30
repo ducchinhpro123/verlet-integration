@@ -75,16 +75,20 @@ int main(void)
             }
         }
 
-        for (int i = 0; i < MAX_OBJECTS; i++)
+        float delta_dt = delta_time / 2.0f;
+        for (int step = 0; step < 2; step++)
         {
-            VerletObject *verlet_object = &verlet_objects[i];
+            for (int i = 0; i < MAX_OBJECTS; i++)
+            {
+                VerletObject *verlet_object = &verlet_objects[i];
 
-            solve_collision_verlet_circle(verlet_object, big_circle);
-            update_position(verlet_object, delta_time);
-            accelerate(verlet_object, gravity);
+                solve_collision_verlet_circle(verlet_object, big_circle);
+                update_position(verlet_object, delta_dt);
+                accelerate(verlet_object, gravity);
+            }
+
+            solve_collision(verlet_objects, active_objects);
         }
-
-        solve_collision(verlet_objects, active_objects);
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
@@ -121,7 +125,8 @@ void solve_collision_verlet_circle(VerletObject *verlet_object, BigCircle big_ci
 
 void update_position(VerletObject *verlet_object, float delta_time)
 {
-    Vector2 velocity = Vector2Subtract(verlet_object->current_position, verlet_object->old_position);
+    Vector2 velocity =
+        Vector2Subtract(verlet_object->current_position, verlet_object->old_position);
 
     // Save current position into old position
     verlet_object->old_position = verlet_object->current_position;
@@ -149,7 +154,8 @@ void solve_collision(VerletObject *objects, int count)
         {
             VerletObject *object2 = &objects[j];
 
-            Vector2 collision_axis = Vector2Subtract(object1->current_position, object2->current_position);
+            Vector2 collision_axis =
+                Vector2Subtract(object1->current_position, object2->current_position);
             float dist = Vector2Length(collision_axis);
             float min_dist = object1->size + object2->size;
 
@@ -157,8 +163,10 @@ void solve_collision(VerletObject *objects, int count)
             {
                 Vector2 n = Vector2Normalize(collision_axis);
                 float delta = min_dist - dist;
-                object1->current_position = Vector2Add(object1->current_position, Vector2Scale(n, delta * 0.5f));
-                object2->current_position = Vector2Subtract(object2->current_position, Vector2Scale(n, delta * 0.5f));
+                object1->current_position =
+                    Vector2Add(object1->current_position, Vector2Scale(n, delta * 0.5f));
+                object2->current_position =
+                    Vector2Subtract(object2->current_position, Vector2Scale(n, delta * 0.5f));
             }
         }
     }
@@ -166,7 +174,7 @@ void solve_collision(VerletObject *objects, int count)
 
 VerletObject generate_verlet_object()
 {
-    SetRandomSeed(GetTime()*1000.0);
+    SetRandomSeed(GetTime() * 1000.0);
     VerletObject verlet_object = {0};
     verlet_object.size = GetRandomValue(1, 20);
     /*verlet_object.size = 20;*/
