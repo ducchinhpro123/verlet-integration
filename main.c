@@ -1,6 +1,6 @@
 #include <raylib.h>
 #include <raymath.h>
-#include <time.h>
+/*#include <time.h>*/
 /*#include <stdio.h>*/
 
 #define MAX_OBJECTS 1000
@@ -76,7 +76,7 @@ int main(void)
         }
 
         float delta_dt = delta_time / 8.0f;
-        for (int step = 0; step < 8; step++)
+        for (int step = 0; step <= 8; step++)
         {
             for (int i = 0; i < MAX_OBJECTS; i++)
             {
@@ -88,7 +88,6 @@ int main(void)
             }
 
             solve_collision(verlet_objects, active_objects);
-            
         }
         BeginDrawing();
 
@@ -132,7 +131,8 @@ void update_position(VerletObject *verlet_object, float delta_time)
     // Save current position into old position
     verlet_object->old_position = verlet_object->current_position;
 
-    // Perform Verlet Integration
+    // Perform Verlet Integration: Current position = current position + velocity + acceleration *
+    // t^2
     verlet_object->current_position = Vector2Add(
         verlet_object->current_position,
         Vector2Add(velocity, Vector2Scale(verlet_object->acceleration, delta_time * delta_time)));
@@ -148,25 +148,27 @@ void accelerate(VerletObject *verlet_object, Vector2 acc)
 
 void solve_collision(VerletObject *objects, int count)
 {
+    const float response_coef = 0.75f;
     for (int i = 0; i < count; i++)
     {
         VerletObject *object1 = &objects[i];
-
         for (int j = i + 1; j < count; j++)
         {
             VerletObject *object2 = &objects[j];
-
-            Vector2 collision_axis = Vector2Subtract(object1->current_position, object2->current_position);
-
-            float dist = Vector2Length(collision_axis);
+            Vector2 v = Vector2Subtract(object1->current_position, object2->current_position);
+            float dist2 = v.x * v.x + v.y * v.y;
             float min_dist = object1->size + object2->size;
 
-            if (dist < min_dist)
+            if (dist2 < min_dist * min_dist)
             {
-                Vector2 n = Vector2Normalize(collision_axis);
-                float delta = (min_dist - dist) * 0.5f;
-                object1->current_position = Vector2Add(object1->current_position, Vector2Scale(n, delta));
-                object2->current_position = Vector2Subtract(object2->current_position, Vector2Scale(n, delta));
+                Vector2 n = Vector2Normalize(v);
+                const float dist = sqrtf(dist2);
+                const float mass_ratio_1 = object1->size / (object1->size + object2->size);
+                const float mass_ratio_2 = object2->size / (object1->size + object2->size);
+                const float delta = 0.5f * response_coef * (dist - min_dist);
+
+                object1->current_position = Vector2Subtract(object1->current_position, Vector2Scale(n, mass_ratio_2 * delta));
+                object2->current_position = Vector2Add(object2->current_position, Vector2Scale(n, mass_ratio_1 * delta));
             }
         }
     }
