@@ -45,7 +45,7 @@ int main(void)
 
     VerletObject verlet_objects[MAX_OBJECTS];
 
-    Vector2 gravity = {0.0f, 98.0f};
+    Vector2 gravity = {0.0f, 1000.0f};
 
     BigCircle big_circle = {0};
     big_circle.radius = 450;
@@ -64,7 +64,7 @@ int main(void)
         percentage_occupied = (circle_area_verlet / circle_area_circle_cover) * 100;
 
         // Generate verlet objects
-        if (elapsed_time > 0.01f && percentage_occupied < 95)  // 80%
+        if (elapsed_time > 0.02f && percentage_occupied < 95)  // 80%
         {
             if (active_objects < MAX_OBJECTS)
             {
@@ -88,6 +88,7 @@ int main(void)
             }
 
             solve_collision(verlet_objects, active_objects);
+            
         }
         BeginDrawing();
 
@@ -150,23 +151,22 @@ void solve_collision(VerletObject *objects, int count)
     for (int i = 0; i < count; i++)
     {
         VerletObject *object1 = &objects[i];
+
         for (int j = i + 1; j < count; j++)
         {
             VerletObject *object2 = &objects[j];
 
-            Vector2 collision_axis =
-                Vector2Subtract(object1->current_position, object2->current_position);
+            Vector2 collision_axis = Vector2Subtract(object1->current_position, object2->current_position);
+
             float dist = Vector2Length(collision_axis);
             float min_dist = object1->size + object2->size;
 
             if (dist < min_dist)
             {
                 Vector2 n = Vector2Normalize(collision_axis);
-                float delta = min_dist - dist;
-                object1->current_position =
-                    Vector2Add(object1->current_position, Vector2Scale(n, delta * 0.5f));
-                object2->current_position =
-                    Vector2Subtract(object2->current_position, Vector2Scale(n, delta * 0.5f));
+                float delta = (min_dist - dist) * 0.5f;
+                object1->current_position = Vector2Add(object1->current_position, Vector2Scale(n, delta));
+                object2->current_position = Vector2Subtract(object2->current_position, Vector2Scale(n, delta));
             }
         }
     }
