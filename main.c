@@ -75,8 +75,8 @@ int main(void)
             }
         }
 
-        float delta_dt = delta_time / 8.0f;
-        for (int step = 0; step <= 8; step++)
+        float delta_dt = delta_time / 4.0f;
+        for (int step = 0; step < 4; step++)
         {
             for (int i = 0; i < MAX_OBJECTS; i++)
             {
@@ -191,10 +191,7 @@ VerletObject generate_verlet_object()
 
     verlet_object.phase = global_time;
 
-    /*float oscillation = 50.0f * sinf(verlet_object.phase);*/
-
-    verlet_object.current_position =
-        (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f - 200.0f};
+    verlet_object.current_position = (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f - 200.0f};
     verlet_object.old_position = verlet_object.current_position;
 
     return verlet_object;
