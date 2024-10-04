@@ -1,0 +1,9 @@
+
+		<div>The idea is very simple. <br>
+			- If we can create a ball, we can create a next ball and then we can create the next next next
+			ball. <br>
+			- If we can apply the verlet integration to one ball and it's moving, we can apply for the other
+			ball.<br>
+			- If we can solve the collision between two balls, we can do that with
+			the other balls. And here we go.<br>
+		</div>

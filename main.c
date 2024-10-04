@@ -1,10 +1,7 @@
 #include <raylib.h>
 #include <raymath.h>
-/*#include <time.h>*/
-/*#include <stdio.h>*/
 
 #define MAX_OBJECTS 1000
-/* Apply to the ball some physical :) */
 
 typedef struct BigCircle
 {
@@ -27,6 +24,7 @@ void update_position(VerletObject *verlet_object, float delta_time);
 void accelerate(VerletObject *verlet_object, Vector2 acc);
 void solve_collision(VerletObject *objects, int count);
 void solve_collision_verlet_circle(VerletObject *verlet_object, BigCircle big_circle);
+Color get_rainbow();
 VerletObject generate_verlet_object();
 
 float global_time;
@@ -38,7 +36,7 @@ int main(void)
     int active_objects = 0;
     int verlet_objects_number = 0;
     float percentage_occupied = 0;
-    const int window_width = 1600, window_height = 900;
+    const int window_width = 1000, window_height = 1000;
 
     InitWindow(window_width, window_height, "Verlet Integration");
     SetTargetFPS(60);
@@ -64,19 +62,20 @@ int main(void)
         percentage_occupied = (circle_area_verlet / circle_area_circle_cover) * 100;
 
         // Generate verlet objects
-        if (elapsed_time > 0.02f && percentage_occupied < 95)  // 80%
+        if (percentage_occupied < 95)  // 80%
         {
             if (active_objects < MAX_OBJECTS)
             {
                 verlet_objects[active_objects] = generate_verlet_object();
+
                 active_objects++;
                 elapsed_time = 0;
                 verlet_objects_number++;
             }
         }
 
-        float delta_dt = delta_time / 4.0f;
-        for (int step = 0; step < 4; step++)
+        float delta_dt = delta_time / 8.0f;
+        for (int step = 0; step < 8; step++)
         {
             for (int i = 0; i < MAX_OBJECTS; i++)
             {
@@ -141,9 +140,9 @@ void update_position(VerletObject *verlet_object, float delta_time)
     verlet_object->acceleration = (Vector2){0, 0};
 }
 
-void accelerate(VerletObject *verlet_object, Vector2 acc)
+void accelerate(VerletObject *verlet_object, Vector2 gravity)
 {
-    verlet_object->acceleration = Vector2Add(verlet_object->acceleration, acc);
+    verlet_object->acceleration = Vector2Add(verlet_object->acceleration, gravity);
 }
 
 void solve_collision(VerletObject *objects, int count)
@@ -167,11 +166,23 @@ void solve_collision(VerletObject *objects, int count)
                 const float mass_ratio_2 = object2->size / (object1->size + object2->size);
                 const float delta = 0.5f * response_coef * (dist - min_dist);
 
-                object1->current_position = Vector2Subtract(object1->current_position, Vector2Scale(n, mass_ratio_2 * delta));
-                object2->current_position = Vector2Add(object2->current_position, Vector2Scale(n, mass_ratio_1 * delta));
+                object1->current_position = Vector2Subtract(object1->current_position,
+                                                            Vector2Scale(n, mass_ratio_2 * delta));
+                object2->current_position =
+                    Vector2Add(object2->current_position, Vector2Scale(n, mass_ratio_1 * delta));
             }
         }
     }
+}
+
+Color get_rainbow()
+{
+    const float r = sinf(global_time);
+    const float g = sinf(global_time + 0.33f * 2.0f * PI);
+    const float b = sinf(global_time + 0.66f * 2.0f * PI);
+
+    return (Color){(unsigned char)(255.0f * r * r), (unsigned char)(255.0f * g * g),
+                   (unsigned char)(255.0f * b * b), 255.0f};
 }
 
 VerletObject generate_verlet_object()
@@ -182,16 +193,11 @@ VerletObject generate_verlet_object()
     /*verlet_object.size = 20;*/
     circle_area_verlet += PI * verlet_object.size * verlet_object.size;
 
-    const float r = sinf(global_time);
-    const float g = sinf(global_time + 0.33f * 2.0f * PI);
-    const float b = sinf(global_time + 0.66f * 2.0f * PI);
-
-    verlet_object.color = (Color){(unsigned char)(255.0f * r * r), (unsigned char)(255.0f * g * g),
-                                  (unsigned char)(255.0f * b * b), 255.0f};
-
+    verlet_object.color = get_rainbow();
     verlet_object.phase = global_time;
 
-    verlet_object.current_position = (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f - 200.0f};
+    verlet_object.current_position =
+        (Vector2){GetScreenWidth() / 2.0f + 200.0f, GetScreenHeight() / 2.0f - 200.0f};
     verlet_object.old_position = verlet_object.current_position;
 
     return verlet_object;
