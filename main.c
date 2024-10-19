@@ -28,14 +28,13 @@ Color get_rainbow();
 VerletObject generate_verlet_object();
 
 float global_time;
-float circle_area_verlet = 0;
 
 int main(void)
 {
+    // init
     float elapsed_time = 0.0f;
     int active_objects = 0;
     int verlet_objects_number = 0;
-    float percentage_occupied = 0;
     const int window_width = 1000, window_height = 1000;
 
     InitWindow(window_width, window_height, "Verlet Integration");
@@ -50,47 +49,39 @@ int main(void)
     big_circle.pos = (Vector2){window_width / 2.0f, window_height / 2.0f};
     big_circle.color = BLACK;
 
-    float circle_area_circle_cover = PI * big_circle.radius * big_circle.radius;
-
     while (!WindowShouldClose())
     {
         float delta_time = GetFrameTime();
         elapsed_time += delta_time;
         global_time += delta_time;
 
-        // The total area of verlet objects that generate_verlet_object() generated
-        percentage_occupied = (circle_area_verlet / circle_area_circle_cover) * 100;
-
         // Generate verlet objects
-        if (percentage_occupied < 95)  // 80%
+        if (active_objects < MAX_OBJECTS)
         {
-            if (active_objects < MAX_OBJECTS)
-            {
-                verlet_objects[active_objects] = generate_verlet_object();
+            verlet_objects[active_objects] = generate_verlet_object();
 
-                active_objects++;
-                elapsed_time = 0;
-                verlet_objects_number++;
-            }
+            active_objects++;
+            elapsed_time = 0;
+            verlet_objects_number++;
         }
 
         float delta_dt = delta_time / 8.0f;
-        for (int step = 0; step < 8; step++)
+        /*for (int step = 0; step < 8; step++)*/
+        /*{*/
+        for (int i = 0; i < MAX_OBJECTS; i++)
         {
-            for (int i = 0; i < MAX_OBJECTS; i++)
-            {
-                VerletObject *verlet_object = &verlet_objects[i];
+            VerletObject *verlet_object = &verlet_objects[i];
 
-                solve_collision_verlet_circle(verlet_object, big_circle);
-                update_position(verlet_object, delta_dt);
-                accelerate(verlet_object, gravity);
-            }
-
-            solve_collision(verlet_objects, active_objects);
+            solve_collision_verlet_circle(verlet_object, big_circle);
+            update_position(verlet_object, delta_dt);
+            accelerate(verlet_object, gravity);
         }
+
+        solve_collision(verlet_objects, active_objects);
+        /*}*/
         BeginDrawing();
 
-        ClearBackground(RAYWHITE);
+        ClearBackground(BLACK);
 
         DrawCircleV(big_circle.pos, big_circle.radius, BLACK);
 
@@ -101,7 +92,6 @@ int main(void)
         }
 
         DrawText(TextFormat("FPS: %d", GetFPS()), 10, 30, 20, RED);
-        DrawText(TextFormat("percentage: %.2f %", percentage_occupied), 10, 50, 20, RED);
         DrawText(TextFormat("verlet_objects_number: %d", verlet_objects_number), 10, 70, 20, RED);
 
         EndDrawing();
@@ -156,7 +146,7 @@ void solve_collision(VerletObject *objects, int count)
             VerletObject *object2 = &objects[j];
             Vector2 v = Vector2Subtract(object1->current_position, object2->current_position);
             float dist2 = v.x * v.x + v.y * v.y;
-            float min_dist = object1->size + object2->size;
+            float min_dist = object1->size + object2->size + 0.5;
 
             if (dist2 < min_dist * min_dist)
             {
@@ -189,9 +179,7 @@ VerletObject generate_verlet_object()
 {
     SetRandomSeed(GetTime() * 1000.0);
     VerletObject verlet_object = {0};
-    verlet_object.size = GetRandomValue(1, 20);
-    /*verlet_object.size = 20;*/
-    circle_area_verlet += PI * verlet_object.size * verlet_object.size;
+    verlet_object.size = GetRandomValue(4, 20);
 
     verlet_object.color = get_rainbow();
     verlet_object.phase = global_time;
